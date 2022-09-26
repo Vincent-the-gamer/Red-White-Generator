@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="preload stylesheet" as="style" href="https://fonts.loli.net/css?family=Noto+Sans+SC:900" />
+  <link rel="preload stylesheet" as="style" href="https://fonts.loli.net/css?family=Noto+Serif+SC:900" />
+  <meta charset="utf-8" />
+  <title>红白字生成器 by 诡锋</title>
+  <style type="text/css">
+    body{
+      background-color: black;
+      color: white;
+      text-align: center;
+    }
+    div {
+      display: block;
+      margin: 10px 0;
+    }
+
+    input[type="radio"] {
+      display: none;
+    }
+
+    input[type="text"]{
+      height: 25px;
+      margin-top: 5px;
+    }
+
+    label {
+      display: inline-block;
+      color: black;
+      background-color: lightblue;
+      padding: 3px 10px;
+    }
+
+    .text-type {
+      /* display: none; */
+    }
+
+    .text-type input[type="radio"]:checked + label {
+      color: white !important;
+      background-color: blue !important;
+    }
+
+    .background-color input[type="radio"]:checked + label {
+      color: black;
+      background-color: yellow;
+    }
+
+    .save{
+      color: white;
+      background-color: deeppink;
+      height: 50px;
+      width: 90px;
+      border-radius: 10px;
+      border: 1px solid yellow;
+    }
+    .save:hover{
+      background-color: blue;
+    }
+
+    #bilibili, #github{
+      color: yellow;
+    }
+    #bilibili:hover, #github:hover{
+      color: deeppink;
+      cursor: pointer;
+    }
+
+
+    ::-webkit-scrollbar{
+      display: none;
+    }
+
+  </style>
+  <script type="text/javascript">
+    function Drawer(canvas) {
+
+      this.canvas = canvas;
+      this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this), false);
+      this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+      this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+      this.canvas.addEventListener('mouseleave', this.onMouseLeave.bind(this), false);
+      this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this), false);
+      this.canvas.addEventListener('touchmove', this.onTouchMove.bind(this), false);
+      this.canvas.addEventListener('touchend', this.onTouchEnd.bind(this), false);
+
+      this.ctx = canvas.getContext('2d');
+      this.ctx.lineJoin = 'round';
+      this.ctx.lineCap = 'round';
+      this.ctx.fillStyle = 'white';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+      this.topText = new TopText(this.ctx);
+      this.bottomText = new BottomText(this.ctx);
+
+      this.useTransparent = false;
+
+      this.dragging = false;
+      this.dragStartCursorPos = 0;
+      this.dragStartBottomTextPos = 0;
+
+      this.lang = "";
+    }
+
+    Drawer.prototype.refresh = function() {
+      this.clear();
+
+      if (this.lang === "ja") {
+        this.topText.font = "100px notobk";
+        this.bottomText.font = "100px notoserifbk";
+      } else {
+        this.topText.font = "100px 'Noto Sans SC'";
+        this.bottomText.font = "100px 'Noto Serif SC'";
+      }
+
+      this.topText.draw();
+      this.bottomText.draw();
+    }
+
+    Drawer.prototype.clear = function() {
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (!this.useTransparent) {
+        this.ctx.fillStyle = `white`;
+        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+      } else {
+        this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+      }
+    }
+
+    Drawer.prototype.onCursorDown = function(e) {
+      this.dragging = true;
+      this.dragStartCursorPos = e.clientX;
+      this.dragStartBottomTextPos = this.bottomText.x;
+    }
+
+    Drawer.prototype.onCursorMove = function(e) {
+      if (this.dragging) {
+        const dx = e.clientX - this.dragStartCursorPos;
+        this.bottomText.x = this.dragStartBottomTextPos + dx;
+        this.refresh();
+      }
+
+      const bottomTextTop = this.canvas.getBoundingClientRect().top + this.topText.y;
+      const bottomTextBottom = this.canvas.getBoundingClientRect().top + this.canvas.height;
+      if (bottomTextTop < e.clientY && e.clientY < bottomTextBottom) {
+        document.body.style.cursor = "move";
+      } else {
+        document.body.style.cursor = "auto"
+      }
+    }
+
+    Drawer.prototype.onCursorUp = function(e) {
+      this.dragging = false;
+      this.dragStartCursorPos = 0;
+      this.dragStartBottomTextPos = 0;
+    }
+
+    Drawer.prototype.onCursorLeave = function(e) {
+      if (this.dragging) {
+        this.dragging = false;
+        this.dragStartCursorPos = 0;
+        this.dragStartBottomTextPos = 0;
+      }
+      document.body.style.cursor = "auto"
+    }
+
+    Drawer.prototype.onMouseDown = function(e) {
+      this.onCursorDown(e);
+    };
+
+    Drawer.prototype.onMouseMove = function(e) {
+      this.onCursorMove(e);
+    };
+
+    Drawer.prototype.onMouseUp = function(e) {
+      this.onCursorUp(e);
+    };
+
+    Drawer.prototype.onMouseLeave = function(e) {
+      this.onCursorLeave(e);
+    };
+
+    Drawer.prototype.onTouchStart = function(e) {
+      e.preventDefault();
+      e.clientX = e.touches[0].clientX;
+      e.clientY = e.touches[0].clientY;
+      this.onCursorDown(e);
+    };
+
+    Drawer.prototype.onTouchMove = function(e) {
+      e.preventDefault();
+      e.clientX = e.touches[0].clientX;
+      e.clientY = e.touches[0].clientY;
+      this.onCursorMove(e);
+    };
+
+    Drawer.prototype.onTouchEnd = function(e) {
+      e.preventDefault();
+      e.clientX = e.changedTouches[0].clientX;
+      e.clientY = e.changedTouches[0].clientY;
+      this.onCursorUp(e);
+    };
+
+    Drawer.prototype.saveImage = function() {
+      const width = Math.max(this.topText.x + this.topText.w, this.bottomText.x + this.bottomText.w);
+      const height = this.ctx.canvas.height;
+
+      const data = this.ctx.getImageData(0, 0, width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = data.width;
+      canvas.height = data.height;
+
+      const ctx = canvas.getContext('2d');
+      ctx.putImageData(data, 0, 0);
+
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.setAttribute("download", "红白字图片.png");
+
+      document.body.appendChild(a);
+      a.click();
+    }
+
+    // Drawer.prototype.openImage = function() {
+    //   let q =
+    //           'top=' + this.topText.value +
+    //           '&bottom=' + this.bottomText.value +
+    //           '&bx=' + this.bottomText.x +
+    //           '&order=' + this.bottomText.useImg +
+    //           '&color=' + this.useTransparent +
+    //           '&width=' + Math.max(this.topText.x + this.topText.w, this.bottomText.x + this.bottomText.w) +
+    //           '&height=' + this.ctx.canvas.height;
+    //   if (this.lang === "ja") {
+    //     window.open('result.html?' + q);
+    //   } else {
+    //     window.open('result_cn.html?' + q);
+    //   }
+    // }
+
+  </script>
+  <script type="text/javascript">
+    /* globals Drawer */
+    let drawer = null;
+
+    window.onload = function() {
+      drawer = new Drawer(document.getElementById("canvas"));
+
+      Array.prototype.forEach.call(document.querySelectorAll('input[type=radio][name="text-type"]'), function(radio) {
+        radio.addEventListener('change', onChangeState);
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll('input[type=radio][name="background-color"]'), function(radio) {
+        radio.addEventListener('change', onChangeState);
+      });
+    };
+
+    function onChangeState() {
+      const textboxTop = document.getElementById("textboxTop");
+      const textboxBottom = document.getElementById('textboxBottom');
+      const backgroundOrder = document.querySelector('input[name="background-color"]:checked');
+      const textOrder = document.querySelector('input[name="text-type"]:checked');
+
+      drawer.useTransparent = backgroundOrder.value === `transparent`;
+      drawer.bottomText.useImg = textOrder.value === `image`;
+      drawer.topText.value = textboxTop.value;
+      drawer.bottomText.value = textboxBottom.value.replaceAll("！", "!");
+      drawer.useTransparent = document.querySelector('input[name="background-color"]:checked').value === `transparent`;
+
+      drawer.refresh();
+
+      document.fonts.ready.then(function() {
+        drawer.refresh();
+      });
+
+      if (textOrder.value === 'image') {
+        textboxBottom.style.display = "none";
+      } else {
+        textboxBottom.style.display = "inline";
+      }
+    }
+
+  </script>
+  <script type="text/javascript">
+    function TopText(ctx) {
+
+      this.value = "";
+      this.font = "";
+      this.x = 70.0;
+      this.y = 100.0;
+      this.w = 0.0;
+      this.ctx = ctx;
+    }
+
+    TopText.prototype.draw = function() {
+      this.ctx.font = this.font;
+      this.ctx.setTransform(1, 0, -0.45, 1, 0, 0);
+
+      //黒色
+      {
+        this.ctx.strokeStyle = "#000";
+        this.ctx.lineWidth = 22;
+        this.ctx.strokeText(this.value, this.x + 4, this.y + 4);
+      }
+
+      //銀色
+      {
+        const grad = this.ctx.createLinearGradient(0, 24, 0, 122);
+        grad.addColorStop(0.0, 'rgb(0,15,36)');
+        grad.addColorStop(0.10, 'rgb(255,255,255)');
+        grad.addColorStop(0.18, 'rgb(55,58,59)');
+        grad.addColorStop(0.25, 'rgb(55,58,59)');
+        grad.addColorStop(0.5, 'rgb(200,200,200)');
+        grad.addColorStop(0.75, 'rgb(55,58,59)');
+        grad.addColorStop(0.85, 'rgb(25,20,31)');
+        grad.addColorStop(0.91, 'rgb(240,240,240)');
+        grad.addColorStop(0.95, 'rgb(166,175,194)');
+        grad.addColorStop(1, 'rgb(50,50,50)');
+        this.ctx.strokeStyle = grad;
+        this.ctx.lineWidth = 20;
+        this.ctx.strokeText(this.value, this.x + 4, this.y + 4);
+      }
+
+      //黒色
+      {
+        this.ctx.strokeStyle = "#000000";
+        this.ctx.lineWidth = 16;
+        this.ctx.strokeText(this.value, this.x, this.y);
+      }
+
+      //金色
+      {
+        const grad = this.ctx.createLinearGradient(0, 20, 0, 100);
+        grad.addColorStop(0, 'rgb(253,241,0)');
+        grad.addColorStop(0.25, 'rgb(245,253,187)');
+        grad.addColorStop(0.4, 'rgb(255,255,255)');
+        grad.addColorStop(0.75, 'rgb(253,219,9)');
+        grad.addColorStop(0.9, 'rgb(127,53,0)');
+        grad.addColorStop(1, 'rgb(243,196,11)');
+        this.ctx.strokeStyle = grad;
+        this.ctx.lineWidth = 10;
+        this.ctx.strokeText(this.value, this.x, this.y);
+      }
+
+      //黒
+      this.ctx.lineWidth = 6;
+      this.ctx.strokeStyle = '#000';
+      this.ctx.strokeText(this.value, this.x + 2, this.y - 3);
+
+      //白
+      this.ctx.lineWidth = 6;
+      this.ctx.strokeStyle = '#FFFFFF';
+      this.ctx.strokeText(this.value, this.x, this.y - 3);
+
+      //赤
+      {
+        const grad = this.ctx.createLinearGradient(0, 20, 0, 100);
+        grad.addColorStop(0, 'rgb(255, 100, 0)');
+        grad.addColorStop(0.5, 'rgb(123, 0, 0)');
+        grad.addColorStop(0.51, 'rgb(240, 0, 0)');
+        grad.addColorStop(1, 'rgb(5, 0, 0)');
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeStyle = grad;
+        this.ctx.strokeText(this.value, this.x, this.y - 3);
+      }
+
+      //赤
+      {
+        const grad = this.ctx.createLinearGradient(0, 20, 0, 100);
+        grad.addColorStop(0, 'rgb(230, 0, 0)');
+        grad.addColorStop(0.5, 'rgb(123, 0, 0)');
+        grad.addColorStop(0.51, 'rgb(240, 0, 0)');
+        grad.addColorStop(1, 'rgb(5, 0, 0)');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillText(this.value, this.x, this.y - 3);
+      }
+
+      this.w = this.ctx.measureText(this.value).width + 30;
+    }
+
+  </script>
+  <script type="text/javascript">
+    function BottomText(ctx) {
+
+      this.value = "";
+      this.font = "";
+      this.x = 250.0;
+      this.y = 230.0;
+      this.w = 0.0;
+      this.ctx = ctx;
+
+      this.useImg = false;
+      this.img = new Image();
+      this.img.src = `https://img.moegirl.org.cn/common/4/47/Liyuu%E5%85%AC%E5%BC%8F%E7%85%A7.jpg`;
+    }
+
+    BottomText.prototype.draw = function() {
+      if (this.useImg) {
+        this.drawImg();
+        return;
+      }
+
+      this.ctx.font = this.font;
+      this.ctx.setTransform(1, 0, -0.45, 1, 0, 0);
+
+      //黒色
+      {
+        this.ctx.strokeStyle = "#000";
+        this.ctx.lineWidth = 22;
+        this.ctx.strokeText(this.value, this.x + 5, this.y + 2);
+      }
+
+      // 銀
+      {
+        const grad = this.ctx.createLinearGradient(0, this.y - 80, 0, this.y + 18);
+        grad.addColorStop(0, 'rgb(0,15,36)');
+        grad.addColorStop(0.25, 'rgb(250,250,250)');
+        grad.addColorStop(0.5, 'rgb(150,150,150)');
+        grad.addColorStop(0.75, 'rgb(55,58,59)');
+        grad.addColorStop(0.85, 'rgb(25,20,31)');
+        grad.addColorStop(0.91, 'rgb(240,240,240)');
+        grad.addColorStop(0.95, 'rgb(166,175,194)');
+        grad.addColorStop(1, 'rgb(50,50,50)');
+        this.ctx.strokeStyle = grad;
+        this.ctx.lineWidth = 19;
+        this.ctx.strokeText(this.value, this.x + 5, this.y + 2);
+      }
+
+      //黒色
+      {
+        this.ctx.strokeStyle = "#10193A";
+        this.ctx.lineWidth = 17;
+        this.ctx.strokeText(this.value, this.x, this.y);
+      }
+
+      // 白
+      {
+        this.ctx.strokeStyle = "#DDD";
+        this.ctx.lineWidth = 8;
+        this.ctx.strokeText(this.value, this.x, this.y);
+      }
+
+      //紺
+      {
+        const grad = this.ctx.createLinearGradient(0, this.y - 80, 0, this.y);
+        grad.addColorStop(0, 'rgb(16,25,58)');
+        grad.addColorStop(0.03, 'rgb(255,255,255)');
+        grad.addColorStop(0.08, 'rgb(16,25,58)');
+        grad.addColorStop(0.2, 'rgb(16,25,58)');
+        grad.addColorStop(1, 'rgb(16,25,58)');
+        this.ctx.strokeStyle = grad;
+        this.ctx.lineWidth = 7;
+        this.ctx.strokeText(this.value, this.x, this.y);
+      }
+
+      //銀
+      {
+        const grad = this.ctx.createLinearGradient(0, this.y - 80, 0, this.y);
+        grad.addColorStop(0, 'rgb(245,246,248)');
+        grad.addColorStop(0.15, 'rgb(255,255,255)');
+        grad.addColorStop(0.35, 'rgb(195,213,220)');
+        grad.addColorStop(0.5, 'rgb(160,190,201)');
+        grad.addColorStop(0.51, 'rgb(160,190,201)');
+        grad.addColorStop(0.52, 'rgb(196,215,222)');
+        grad.addColorStop(1.0, 'rgb(255,255,255)');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillText(this.value, this.x, this.y - 3);
+      }
+
+      this.w = this.ctx.measureText(this.value).width + 30;
+    }
+
+    BottomText.prototype.drawImg = function() {
+      const x = this.x;
+      const y = this.y - 100.0;
+
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      this.onLoadImg(() => {
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.drawImage(this.img, x + 5, y + 2);
+        this.w = this.img.width + 30;
+      });
+
+      this.w = this.img.width + 30;
+    }
+
+    BottomText.prototype.onLoadImg = function(callback) {
+      if (this.isLoadedImg()) {
+        callback();
+        return;
+      }
+      this.img.onload = callback;
+    }
+
+    BottomText.prototype.isLoadedImg = function() {
+      if (!this.img.complete) return false;
+      if (typeof this.img.naturalWidth !== "undefined" && this.img.naturalWidth === 0) return false;
+      return true;
+    }
+
+  </script>
+  <script type="text/javascript">
+    const {shell} = require('electron')
+    window.addEventListener('load', function() {
+      drawer.lang = "cn";
+      let bilibili = document.getElementById("bilibili");
+      bilibili.addEventListener('click',() => {
+        shell.openExternal("https://space.bilibili.com/3342738");
+      });
+      let github = document.getElementById("github");
+      github.addEventListener('click', () => {
+        shell.openExternal("https://github.com/Vincent-the-gamer");
+      });
+    })
+
+
+
+  </script>
+</head>
+
+<body>
+<br/>
+<h1>红白字生成器 by 诡锋</h1>
+<div>
+  <p>
+      <span>
+          <!-- eslint-disable -->
+          <font color="deeppink">如果出现字体问题，请重新输入一遍。</font>
+      </span>
+  </p>
+  <hr/>
+</div>
+<div>
+  <canvas id="canvas" width="1500px" height="290px"></canvas>
+</div>
+<div>
+  <canvas id="canvas2" width="1500px" height="290px" style="display: none;"></canvas>
+</div>
+<div class="text-type">
+  <input id="bar2" type="radio" name="text-type" value="text" checked />
+  <label for="bar2">生成文字</label>
+</div>
+<div class="background-color">
+  保存图片的时候，背景为
+  <input id="bar3" type="radio" name="background-color" value="transparent" />
+  <label for="bar3">透明</label>
+  <input id="bar4" type="radio" name="background-color" value="white" checked />
+  <label for="bar4">白色</label>
+</div>
+<div>
+  <span id="labelTop">红色文字</span>
+  <input type="text" id="textboxTop" size="50" value="" spellcheck="false" oninput="onChangeState();" />
+  <br />
+  <span id="labelBottom">银色文字</span>
+  <input type="text" id="textboxBottom" size="50" value="" spellcheck="false" oninput="onChangeState();" />
+</div>
+<div>
+  <button class="save" type="button" onclick="drawer.saveImage();">保存图片</button>
+</div>
+<div class="info">
+  诡锋的B站：<span id="bilibili">@-诡锋丿Lavafall-</span> <br/>
+  诡锋的GitHub：<span id="github">@Vincent-the-gamer</span>
+</div>
+
+
+</body>
+</html>

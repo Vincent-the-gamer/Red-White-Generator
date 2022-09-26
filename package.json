@@ -1,0 +1,16 @@
+{
+  "name": "red-white-generator",
+  "version": "1.0.0",
+  "description": "红白字生成器",
+  "main": "main.js",
+  "scripts": {
+    "serve": "electron .",
+    "build": "electron-packager ./ red-white-generator --platform=win32 --out ./output --electron-version 20.2.0 --icon=./favicon.ico"
+  },
+  "author": "诡锋",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^20.2.0",
+    "electron-packager": "^16.0.0"
+  }
+}
